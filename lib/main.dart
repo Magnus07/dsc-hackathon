@@ -1,6 +1,10 @@
+import 'dart:convert';
+//import 'dart:html';
+
 import 'package:flutter/material.dart';
 import 'package:hackathon/constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -178,6 +182,37 @@ class Article{
   Article(String title, String url, String desc){
     this.title = title; this.url = url; this.description = desc;
   }
+
+  factory Article.fromJson(Map<String, dynamic> json) {
+    print(json);
+    return Article(
+      json['contents'],
+      json['news_pic_url'],
+      json['news_text'],
+    );
+  }
+}
+
+
+Future<Article> fetchNews() async {
+   Map<String, String> headers = {
+      'Content-type': 'application/json',
+      'Accept': 'application/json',
+    };
+
+  final response = await http.get(Uri.https('hackaton-serv.herokuapp.com', 'news/list'), headers: headers);
+
+    if (response.statusCode == 200) {
+      // If the server did return a 200 OK response,
+      // then parse the JSON.
+      print(response.body);
+      return Article.fromJson(jsonDecode(response.body));
+    } else {
+      print(response.body);
+      // If the server did not return a 200 OK response,
+      // then throw an exception.
+      throw Exception('Failed to load album');
+    }
 }
 
 class NewsPage extends StatelessWidget {
@@ -187,15 +222,31 @@ class NewsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Article article = new Article("Lorem ipsum", "news.png", "Lorem ipsumLorem ipsumLorem ipsumLorem ipsum");
-    for (int i = 0; i < items.length; i++){
-      items[i] = article;
-    }
-    return ListView.builder(
-      itemCount: items.length,
-      itemBuilder: (context, index){
-        return NewsCard(items[index].title, items[index].url, items[index].description, "Перейти до новини");
-      });
+    //Article article = new Article("Lorem ipsum", "news.png", "Lorem ipsumLorem ipsumLorem ipsumLorem ipsum");
+    // for (int i = 0; i < items.length; i++){
+    //   items[i] = article;
+    // }
+    Future<Article> futureArticle;
+
+    futureArticle = fetchNews();
+
+    return FutureBuilder<Article>(
+      future: futureArticle,
+      builder: (context, snapshot) {
+        if (snapshot.hasData) {
+          return ListView.builder(
+            itemCount: items.length,
+            itemBuilder: (context, index){
+              return NewsCard(items[index].title, items[index].url, items[index].description, "Перейти до новини");
+            });
+        } else if (snapshot.hasError) {
+          return Text("${snapshot.error}");
+        }
+
+        // By default, show a loading spinner.
+        return CircularProgressIndicator();
+      },
+    );
   }
 }
 
@@ -318,27 +369,6 @@ class PartnerCard extends StatelessWidget {
     );
   }
 }
-
-
-class SightsPage extends StatefulWidget {
-  @override
-  _SightsPageState createState() => _SightsPageState();
-}
-
-class _SightsPageState extends State<SightsPage> {
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      children: [
-        // NewsCard(),
-        // NewsCard(),
-        // NewsCard(),
-        // NewsCard(),
-      ]
-    );
-  }
-}
-
 
 
 class ConcreteNews extends StatefulWidget {
