@@ -1,0 +1,410 @@
+import 'package:flutter/material.dart';
+import 'package:hackathon/constants.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  Constants.prefs = await SharedPreferences.getInstance();
+  runApp(MyApp());
+}
+
+
+class LoginPage extends StatefulWidget {
+  LoginPage({Key key}) : super(key: key);
+
+  @override
+  _LoginPageState createState() => _LoginPageState();
+}
+
+TextStyle ts = TextStyle(
+  fontSize: 18,
+  fontWeight: FontWeight.w600,
+);
+
+
+Widget formField(String whatFor, TextEditingController controller, bool isObsecure) {
+    return  Row(
+      children: <Widget>[
+        Text(whatFor,style: ts,),
+        const SizedBox(width: 18),
+        Flexible(
+          child: TextFormField(
+            controller: controller,
+            obscureText: isObsecure,
+            keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                hintText: 'Enter "$whatFor" here'
+              ),
+          // The validator receives the text that the user has entered.
+          validator: (value) {
+            if (value.isEmpty) {
+              return 'Please enter correct value';
+            }
+            return null;
+          },
+          ),
+        ),]
+    );
+}
+
+class _LoginPageState extends State<LoginPage> {
+
+  final _formKey = GlobalKey<FormState>();
+
+  TextEditingController phone = new TextEditingController(text: "+380978954632");
+  TextEditingController password = new TextEditingController(text: "password");
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+         child: Form(
+           key:  _formKey,
+           child: Column(
+             mainAxisAlignment: MainAxisAlignment.center,
+             children: [
+             formField("phone", phone, false),
+             formField("password", password, true),
+             Padding(
+               padding: const EdgeInsets.all(8.0),
+               child: ElevatedButton(
+            onPressed: () async {
+                // Validate returns true if the form is valid, otherwise false.
+                if (_formKey.currentState.validate()) {
+
+                  Constants.prefs.setBool('loggedIn', true);
+                  
+                  Navigator.pop(context);
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => BasePage(NewsPage())),
+                    );
+                    
+                  // If the form is valid, display a snackbar. In the real world,
+                  // you'd often call a server or save the information in a database.
+
+                  ScaffoldMessenger
+                      .of(context)
+                      .showSnackBar(SnackBar(content: Text('Processing Data')));
+                }
+            },
+            child: Text('Submit'),
+          ),
+             ),
+           ],),)
+      );
+  }
+}
+
+
+class BasePage extends StatefulWidget {
+  @override
+  _BasePageState createState() => _BasePageState();
+
+  Widget center;
+  bool showBottomTab;
+
+  BasePage(this.center, {this.showBottomTab = true});
+}
+
+class _BasePageState extends State<BasePage> {
+  int _selectedIndex = 0;
+  static const TextStyle optionStyle = TextStyle(fontSize: 30, fontWeight: FontWeight.bold);
+  static List<Widget> _widgetOptions = <Widget>[
+    NewsPage(),
+    PartnersPage(),
+    ExcursionsPage(),
+  ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('BottomNavigationBar Sample'),
+      ),
+      body: Center(
+        child: _widgetOptions.elementAt(_selectedIndex),
+      ),
+      bottomNavigationBar: !widget.showBottomTab ? null : 
+        BottomNavigationBar(
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Новини',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.business),
+            label: 'Партнери',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.school),
+            label: 'Екскурсії',
+          ),
+        ],
+        currentIndex: _selectedIndex,
+        selectedItemColor: Colors.amber[800],
+        onTap: _onItemTapped,
+      ),
+    );
+  }
+}
+
+class MyApp extends StatelessWidget {
+  // This widget is the root of your application.
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Flutter Demo',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: Constants.prefs.getBool("loggedIn") == null || !Constants.prefs.getBool("loggedIn")  ? BasePage(LoginPage(), showBottomTab: true, ) : BasePage(NewsPage()),
+    );
+  }
+}
+
+
+class Article{
+  String title;
+  String url;
+  String description;
+
+  Article(String title, String url, String desc){
+    this.title = title; this.url = url; this.description = desc;
+  }
+}
+
+class NewsPage extends StatelessWidget {
+
+  List<Article> items = new List(10);
+  
+
+  @override
+  Widget build(BuildContext context) {
+    Article article = new Article("Lorem ipsum", "news.png", "Lorem ipsumLorem ipsumLorem ipsumLorem ipsum");
+    for (int i = 0; i < items.length; i++){
+      items[i] = article;
+    }
+    return ListView.builder(
+      itemCount: items.length,
+      itemBuilder: (context, index){
+        return NewsCard(items[index].title, items[index].url, items[index].description, "Перейти до новини");
+      });
+  }
+}
+
+
+class NewsCard extends StatelessWidget {
+
+  NewsCard(this.title, this.url, this.description, this.buttonText);
+
+  String url;
+  String title;
+  String description;
+  String buttonText;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+        child : Card(
+          child: Column(children: <Widget>[
+            SizedBox(height: 250, child: Image(image: AssetImage(url))),
+            ListTile(
+              title: Text(title),
+              subtitle: Text(description),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: <Widget>[
+                TextButton(
+                  child: Text(buttonText),
+                  onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => ConcreteNews()),
+                      );
+                  },
+                ),
+                const SizedBox(width: 8),
+              ],
+            ),
+          ],
+      ),
+        ),
+    );
+  }
+}
+
+
+class Partner{
+  String title;
+  String image;
+  String description;
+
+  Partner(String title, String image, String desc){
+    this.title = title; this.image = image; this.description = desc;
+  }
+}
+
+
+
+class PartnersPage extends StatefulWidget {
+  @override
+  _PartnersPageState createState() => _PartnersPageState();
+}
+
+class _PartnersPageState extends State<PartnersPage> {
+  List<Partner> items = new List(10);
+  
+
+  @override
+  Widget build(BuildContext context) {
+    Partner partner = new Partner("Partner", "https://miro.medium.com/max/1200/1*mk1-6aYaf_Bes1E3Imhc0A.jpeg", "Lorem ipsumLorem ipsumLorem ipsumLorem ipsum");
+    for (int i = 0; i < items.length; i++){
+      items[i] = partner;
+    }
+    return ListView.builder(
+      itemCount: items.length,
+      itemBuilder: (context, index){
+        return PartnerCard(items[index].title, items[index].image, items[index].description);
+      });
+  }
+}
+
+
+class PartnerCard extends StatelessWidget {
+
+  PartnerCard(this.title, this.url, this.description);
+
+  String url;
+  String title;
+  String description;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      child : Card(
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(children: <Widget>[
+              ClipOval(
+                child: Image.network(
+                  url,
+                  width: 100,
+                  height: 100,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              Flexible(
+                child: Column(
+                  children: [
+                    ListTile(
+                      title: Text(title),
+                      subtitle: Text(description),
+                    )
+                  ],
+                ),
+              ),
+              ]
+            ),
+        ),
+      ),
+    );
+  }
+}
+
+
+class SightsPage extends StatefulWidget {
+  @override
+  _SightsPageState createState() => _SightsPageState();
+}
+
+class _SightsPageState extends State<SightsPage> {
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      children: [
+        // NewsCard(),
+        // NewsCard(),
+        // NewsCard(),
+        // NewsCard(),
+      ]
+    );
+  }
+}
+
+
+
+class ConcreteNews extends StatefulWidget {
+  @override
+  _ConcreteNewsState createState() => _ConcreteNewsState();
+}
+
+class _ConcreteNewsState extends State<ConcreteNews> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('BottomNavigationBar Sample'),
+      ),
+      body: Center(
+        
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Новини',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.business),
+            label: 'Партнери',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.school),
+            label: 'Екскурсії',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+class Excursion{
+  String title;
+  String image;
+  String description;
+
+  Excursion(this.title, this.image, this.description);
+}
+
+
+class ExcursionsPage extends StatefulWidget {
+  @override
+  _ExcursionsPageState createState() => _ExcursionsPageState();
+}
+
+class _ExcursionsPageState extends State<ExcursionsPage> {
+  List<Excursion> items = new List(10);
+  
+
+  @override
+  Widget build(BuildContext context) {
+    Excursion article = new Excursion("Lorem ipsum", "news.png", "Lorem ipsumLorem ipsumLorem ipsumLorem ipsum");
+    for (int i = 0; i < items.length; i++){
+      items[i] = article;
+    }
+    return ListView.builder(
+      itemCount: items.length,
+      itemBuilder: (context, index){
+        return NewsCard(items[index].title, items[index].image, items[index].description, "Переглянути");
+      });
+  }
+}
